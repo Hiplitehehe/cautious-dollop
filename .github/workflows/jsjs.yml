@@ -17,7 +17,7 @@ jobs:
         id: get_sha
         run: |
           API_URL="https://api.github.com/repos/${{ github.repository }}/contents/notes.html"
-          SHA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" $API_URL | jq -r .sha)
+          SHA=$(curl -s -H "Authorization: token ${{ secrets.A }}" $API_URL | jq -r .sha)
           if [ "$SHA" = "null" ]; then SHA=""; fi  # If file doesn't exist, leave SHA empty
           echo "sha=$SHA" >> $GITHUB_ENV
 
