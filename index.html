@@ -24,9 +24,11 @@
 
     <script>
         const repoOwner = "Hiplitehehe";  
-        const repoName = "cautious-dollop";  
+        const repoName = "Notes";  
         const filePath = "index.html";  
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+        
+        const token = "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"; // ⚠️ Replace with your actual token
 
         function showResponse(message, isSuccess) {
             const responseDiv = document.getElementById("response");
@@ -36,7 +38,9 @@
 
         async function loadNotes() {
             try {
-                const response = await fetch(apiUrl);
+                const response = await fetch(apiUrl, {
+                    headers: { "Authorization": `token ${token}` }
+                });
                 if (!response.ok) throw new Error("Failed to fetch notes");
 
                 const data = await response.json();
@@ -49,22 +53,53 @@
             }
         }
 
-        function saveNote() {
+        async function saveNote() {
             const title = document.getElementById("noteTitle").value;
             const content = document.getElementById("noteContent").value;
             if (!title || !content) return showResponse("Title and content required!", false);
 
-            fetch("https://api.github.com/repos/Hiplitehehe/Notes/actions/workflows/update-notes.yml/dispatches", {
-                method: "POST",
-                headers: {
-                    "Accept": "application/vnd.github.v3+json",
-                    "Authorization": "Bearer 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"
-                },
-                body: JSON.stringify({ ref: "main" })
-            })
-            .then(response => response.json())
-            .then(data => showResponse("GitHub Actions triggered: " + JSON.stringify(data), true))
-            .catch(error => showResponse("Error triggering GitHub Actions: " + error.message, false));
+            try {
+                const response = await fetch(apiUrl, {
+                    headers: { "Authorization": `token ${token}` }
+                });
+                if (!response.ok) throw new Error("Failed to fetch file data");
+
+                const fileData = await response.json();
+                const sha = fileData.sha;  
+                const oldContent = atob(fileData.content);
+
+                const notesMatch = oldContent.match(/<!-- NOTES_START -->([\s\S]*?)<!-- NOTES_END -->/);
+                const notesSection = notesMatch ? notesMatch[1] : "";
+                const newNote = `<div class="note"><strong>${title}</strong><p>${content}</p></div>`;
+                const newContent = oldContent.replace(/<!-- NOTES_START -->([\s\S]*?)<!-- NOTES_END -->/, 
+                    `<!-- NOTES_START -->\n${notesSection}\n${newNote}\n<!-- NOTES_END -->`);
+
+                const updatedContent = btoa(newContent);
+
+                const updateResponse = await fetch(apiUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `token ${token}`,
+                        "Accept": "application/vnd.github.v3+json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: "Updated notes",
+                        content: updatedContent,
+                        sha: sha
+                    })
+                });
+
+                const result = await updateResponse.json();
+                if (updateResponse.ok) {
+                    showResponse("Note saved successfully!", true);
+                    loadNotes(); // Reload notes after update
+                } else {
+                    throw new Error("GitHub API error: " + JSON.stringify(result));
+                }
+            } catch (error) {
+                showResponse("Error saving note: " + error.message, false);
+            }
         }
 
         loadNotes();
