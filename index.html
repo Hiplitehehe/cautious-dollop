@@ -1,1 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Notes</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: black; color: white; }
+        textarea, input { width: 80%; padding: 10px; margin-bottom: 10px; }
+        button { padding: 10px; margin: 5px; }
+        .note { border: 1px solid white; padding: 10px; margin: 10px; background-color: #333; }
+    </style>
+</head>
+<body>
+    <h1>📝 GitHub Notes</h1>
 
+    <input type="text" id="title" placeholder="Enter note title"><br>
+    <textarea id="content" placeholder="Write your note..."></textarea><br>
+    <button onclick="saveNote()">Save Note</button>
+
+    <h2>Saved Notes:</h2>
+    <div id="notes-container">Loading...</div>
+
+    <script>
+        const GITHUB_USERNAME = "Hiplitehehe";
+        const REPO = "Notes";
+        const FILE_PATH = "notes.html";  
+        const API_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO}/contents/${FILE_PATH}`;
+
+        async function fetchNotes() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error("Failed to fetch notes.");
+                
+                const fileData = await response.json();
+                const content = atob(fileData.content);
+                const notesMatch = content.match(/<!-- NOTES_START -->([\s\S]*?)<!-- NOTES_END -->/);
+                const notesJson = notesMatch ? notesMatch[1] : "[]";
+                localStorage.setItem("notes", notesJson);
+                
+                loadNotes();
+            } catch (error) {
+                console.error("Error loading notes:", error);
+                document.getElementById("notes-container").innerHTML = "❌ Error loading notes.";
+            }
+        }
+
+        function saveNote() {
+            const title = document.getElementById("title").value.trim();
+            const content = document.getElementById("content").value.trim();
+
+            if (!title || !content) {
+                alert("⚠️ Please enter a title and content!");
+                return;
+            }
+
+            let notes = JSON.parse(localStorage.getItem("notes")) || [];
+            if (notes.some(note => note.title === title)) {
+                alert("❌ Note with this title already exists!");
+                return;
+            }
+
+            notes.push({ title, content });
+            localStorage.setItem("notes", JSON.stringify(notes));
+
+            loadNotes();
+            syncWithGitHub(notes);
+        }
+
+        async function syncWithGitHub(notes) {
+            let sha = null;
+
+            try {
+                const res = await fetch(API_URL);
+                if (res.ok) {
+                    const data = await res.json();
+                    sha = data.sha;
+                }
+            } catch (error) {
+                console.log("No existing file found. Creating new.");
+            }
+
+            const updatedHTML = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>GitHub Notes</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; text-align: center; background-color: black; color: white; }
+                        .note { border: 1px solid white; padding: 10px; margin: 10px; background-color: #333; }
+                    </style>
+                </head>
+                <body>
+                    <h1>📝 GitHub Notes</h1>
+                    <h2>Saved Notes:</h2>
+                    <div id="notes-container">
+                        ${notes.map(note => `<div class="note"><strong>${note.title}</strong><p>${note.content}</p></div>`).join("")}
+                    </div>
+                    <!-- NOTES_START -->
+                    ${JSON.stringify(notes)}
+                    <!-- NOTES_END -->
+                </body>
+                </html>
+            `;
+
+            const requestBody = JSON.stringify({
+                message: "Updated notes",
+                content: btoa(unescape(encodeURIComponent(updatedHTML))),
+                sha: sha
+            });
+
+            try {
+                const pushRes = await fetch(API_URL, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `token YOUR_PERSONAL_ACCESS_TOKEN`,
+                        "Content-Type": "application/json"
+                    },
+                    body: requestBody
+                });
+
+                if (pushRes.ok) {
+                    console.log("Notes updated successfully in GitHub.");
+                } else {
+                    console.error("Failed to update GitHub notes.");
+                }
+            } catch (error) {
+                console.error("Error syncing with GitHub:", error);
+            }
+        }
+
+        function loadNotes() {
+            const container = document.getElementById("notes-container");
+            container.innerHTML = "";
+
+            let notes = JSON.parse(localStorage.getItem("notes")) || [];
+
+            if (notes.length === 0) {
+                container.innerHTML = "<p>No notes found.</p>";
+                return;
+            }
+
+            notes.forEach(note => {
+                const noteDiv = document.createElement("div");
+                noteDiv.classList.add("note");
+                noteDiv.innerHTML = `<strong>${note.title}</strong>
+                    <p>${note.content}</p>`;
+
+                container.appendChild(noteDiv);
+            });
+        }
+
+        fetchNotes();
+    </script>
+</body>
+</html>
