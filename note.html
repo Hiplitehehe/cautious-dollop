@@ -7,18 +7,30 @@
     <title>All Notes</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background: black; color: white; }
-        .note { border: 1px solid white; padding: 10px; margin: 10px; background-color: #333; }
+        h1 { margin-top: 50px; }
+        .note { border: 1px solid white; padding: 10px; margin: 10px; background-color: #333; border-radius: 5px; }
+        .note strong { color: #f39c12; }
+        .note p { color: #bdc3c7; }
+        .error { color: red; }
+        input, textarea { margin: 5px; padding: 10px; width: 300px; }
     </style>
 </head>
 <body>
     <h1>All Notes</h1>
     <div id="notes-container">Loading...</div>
 
+    <h2>Add New Note</h2>
+    <input type="text" id="note-title" placeholder="Note Title" />
+    <textarea id="note-content" placeholder="Write your note here..." rows="4"></textarea>
+    <br>
+    <button id="add-note-button">Add Note</button>
+
     <script>
         const repoOwner = "Hiplitehehe";  
         const repoName = "Notes";  
         const filePath = "j.json";  // Get notes from j.json
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+        const addNoteUrl = "https://lively-recipe-4eca.hiplitehehe.workers.dev/add-note";  // Your Cloudflare Worker endpoint for adding notes
         
         let token = "";  // Will be fetched from Cloudflare Worker
 
@@ -30,6 +42,7 @@
                 console.log("Token fetched successfully!");
             } catch (error) {
                 console.error("Error fetching token:", error);
+                document.getElementById("notes-container").innerHTML = `<p class="error">Error fetching token: ${error.message}</p>`;
             }
         }
 
@@ -43,7 +56,6 @@
                 if (!response.ok) throw new Error("Failed to fetch notes");
 
                 const data = await response.json();
-
                 const decodedContent = atob(data.content);
                 const notes = JSON.parse(decodedContent);
                 
@@ -60,6 +72,33 @@
                 document.getElementById("notes-container").innerHTML = "Error loading notes.";
             }
         }
+
+        document.getElementById("add-note-button").addEventListener("click", async () => {
+            const title = document.getElementById("note-title").value;
+            const content = document.getElementById("note-content").value;
+
+            if (!title || !content) {
+                alert("Please fill in both title and content!");
+                return;
+            }
+
+            try {
+                const response = await fetch(addNoteUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ title, content })
+                });
+
+                if (!response.ok) throw new Error("Failed to add note");
+                alert("Note added successfully!");
+                loadNotes();  // Reload notes after adding
+            } catch (error) {
+                console.error("Error adding note:", error);
+                alert("Error adding note: " + error.message);
+            }
+        });
 
         fetchToken().then(loadNotes);  // Fetch token first, then load notes
     </script>
