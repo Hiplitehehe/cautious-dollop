@@ -30,7 +30,7 @@ jobs:
       - name: Update notes.html on GitHub
         run: |
           curl -X PUT \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: token ${{ secrets.A }}" \
             -H "Accept: application/vnd.github.v3+json" \
             -d '{
               "message": "Auto-update notes.html",
