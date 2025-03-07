@@ -59,7 +59,10 @@
                 const data = await response.json();
                 const decodedContent = atob(data.content);
 
-                const notesMatch = decodedContent.match(/<!-- NOTES_START -->([\s\S]*?)<!-- NOTES_END -->/);
+                const notesMatch = decodedContent.match(/<!-- NOTES_START -->
+([\s\S]*?)
+<div class="note"><strong>Ghg</strong><p>Ggv</p></div>
+<!-- NOTES_END -->/);
                 document.getElementById("notes-container").innerHTML = notesMatch ? notesMatch[1] : "No notes found.";
             } catch (error) {
                 showResponse("Error loading notes: " + error.message, false);
