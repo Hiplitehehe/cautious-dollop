@@ -3,7 +3,7 @@ name: Sync Notes with GitHub
 on:
   push:
     paths:
-      - 'notes.html'  # Runs when notes.html is changed
+      - 'index.html'  # Runs when notes.html is changed
   workflow_dispatch:  # Allows manual runs if needed
 
 jobs:
