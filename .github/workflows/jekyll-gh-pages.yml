@@ -16,7 +16,7 @@ jobs:
       - name: Get existing SHA of notes.html
         id: get_sha
         run: |
-          API_URL="https://api.github.com/repos/${{ github.repository }}/contents/notes.html"
+          API_URL="https://api.github.com/repos/${{ github.repository }}/contents/index.html"
           SHA=$(curl -s -H "Authorization: token ${{ secrets.A }}" $API_URL | jq -r .sha)
           if [ "$SHA" = "null" ]; then SHA=""; fi  # If file doesn't exist, leave SHA empty
           echo "sha=$SHA" >> $GITHUB_ENV
@@ -24,7 +24,7 @@ jobs:
       - name: Encode notes.html to Base64
         id: encode_content
         run: |
-          CONTENT=$(base64 -w 0 notes.html)  # Encode file content
+          CONTENT=$(base64 -w 0 index.html)  # Encode file content
           echo "content=$CONTENT" >> $GITHUB_ENV
 
       - name: Update notes.html on GitHub
@@ -37,4 +37,4 @@ jobs:
               "content": "'"$content"'",
               "sha": "'"$sha"'"
             }' \
-            "https://api.github.com/repos/${{ github.repository }}/contents/notes.html"
+            "https://api.github.com/repos/${{ github.repository }}/contents/index.html"
