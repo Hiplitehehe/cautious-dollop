@@ -1,0 +1,40 @@
+name: Sync Notes with GitHub
+
+on:
+  push:
+    paths:
+      - 'notes.html'  # Runs when notes.html is changed
+  workflow_dispatch:  # Allows manual runs if needed
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Get existing SHA of notes.html
+        id: get_sha
+        run: |
+          API_URL="https://api.github.com/repos/${{ github.repository }}/contents/notes.html"
+          SHA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" $API_URL | jq -r .sha)
+          if [ "$SHA" = "null" ]; then SHA=""; fi  # If file doesn't exist, leave SHA empty
+          echo "sha=$SHA" >> $GITHUB_ENV
+
+      - name: Encode notes.html to Base64
+        id: encode_content
+        run: |
+          CONTENT=$(base64 -w 0 notes.html)  # Encode file content
+          echo "content=$CONTENT" >> $GITHUB_ENV
+
+      - name: Update notes.html on GitHub
+        run: |
+          curl -X PUT \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d '{
+              "message": "Auto-update notes.html",
+              "content": "'"$content"'",
+              "sha": "'"$sha"'"
+            }' \
+            "https://api.github.com/repos/${{ github.repository }}/contents/notes.html"
