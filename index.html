@@ -4,28 +4,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Notes</title>
+    <title>GitHub Notes Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background: black; color: white; }
         .note { border: 1px solid white; padding: 10px; margin: 10px; background-color: #333; }
     </style>
 </head>
 <body>
-    <h1>📝 GitHub Notes</h1>
+    <h1>GitHub Notes Dashboard</h1>
 
+    <!-- Form for Creating Notes -->
     <input type="text" id="noteTitle" placeholder="Title">
     <textarea id="noteContent" placeholder="Write your note..."></textarea>
     <button onclick="saveNote()">Save Note</button>
 
-    <h2>Saved Notes:</h2>
-    <div id="notes-container">Loading...</div>
-    
+    <!-- Button to Navigate to Notes Route -->
+    <br><br>
+    <button onclick="window.location.href='/notes'">View All Notes</button>
+
     <div id="response"></div> <!-- Show response here -->
 
     <script>
         const repoOwner = "Hiplitehehe";  
-        const repoName = "cautious-dollop";  
-        const filePath = "index.html";  
+        const repoName = "Notes";  
+        const filePath = "j.json";  // Save notes in j.json
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
         
         let token = "";  // Will be fetched from Cloudflare Worker
@@ -47,34 +49,6 @@
             responseDiv.style.color = isSuccess ? "green" : "red";
         }
 
-        async function loadNotes() {
-            try {
-                if (!token) await fetchToken();  // Ensure token is fetched before API call
-
-                const response = await fetch(apiUrl, {
-                    headers: { "Authorization": `token ${token}` }
-                });
-                if (!response.ok) throw new Error("Failed to fetch notes");
-
-                const data = await response.json();
-                const decodedContent = atob(data.content);
-
-                const notesMatch = decodedContent.match(/<!-- NOTES_START -->
-
-
-([\s\S]*?)
-<div class="note"><strong>Ghg</strong><p>Ggv</p></div>
-
-<div class="note"><strong>Gv</strong><p>Ggv</p></div>
-
-<div class="note"><strong>Vvb</strong><p>Vvv</p></div>
-<!-- NOTES_END -->/);
-                document.getElementById("notes-container").innerHTML = notesMatch ? notesMatch[1] : "No notes found.";
-            } catch (error) {
-                showResponse("Error loading notes: " + error.message, false);
-            }
-        }
-
         async function saveNote() {
             const title = document.getElementById("noteTitle").value;
             const content = document.getElementById("noteContent").value;
@@ -92,13 +66,11 @@
                 const sha = fileData.sha;  
                 const oldContent = atob(fileData.content);
 
-                const notesMatch = oldContent.match(/<!-- NOTES_START -->([\s\S]*?)<!-- NOTES_END -->/);
-                const notesSection = notesMatch ? notesMatch[1] : "";
-                const newNote = `<div class="note"><strong>${title}</strong><p>${content}</p></div>`;
-                const newContent = oldContent.replace(/<!-- NOTES_START -->([\s\S]*?)<!-- NOTES_END -->/, 
-                    `<!-- NOTES_START -->\n${notesSection}\n${newNote}\n<!-- NOTES_END -->`);
+                const notes = oldContent ? JSON.parse(oldContent) : [];
+                const newNote = { title: title, content: content };
+                notes.push(newNote);
 
-                const updatedContent = btoa(newContent);
+                const updatedContent = btoa(JSON.stringify(notes));
 
                 const updateResponse = await fetch(apiUrl, {
                     method: "PUT",
@@ -117,7 +89,6 @@
                 const result = await updateResponse.json();
                 if (updateResponse.ok) {
                     showResponse("Note saved successfully!", true);
-                    loadNotes(); // Reload notes after update
                 } else {
                     throw new Error("GitHub API error: " + JSON.stringify(result));
                 }
@@ -125,8 +96,6 @@
                 showResponse("Error saving note: " + error.message, false);
             }
         }
-
-        fetchToken().then(loadNotes); // Fetch token first, then load notes
     </script>
 </body>
 </html>
