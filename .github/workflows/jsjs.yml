@@ -24,7 +24,7 @@ jobs:
       - name: Encode notes.html to Base64
         id: encode_content
         run: |
-          CONTENT=$(base64 -w 0 notes.html)  # Encode file content
+          CONTENT=$(base64 -w 0 index.html)  # Encode file content
           echo "content=$CONTENT" >> $GITHUB_ENV
 
       - name: Update notes.html on GitHub
